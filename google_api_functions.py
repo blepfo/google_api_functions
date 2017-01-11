@@ -22,15 +22,13 @@ import base64
 
 """--- Information for Authorization ---"""
 APPLICATION_NAME = 'APPLICATION NAME'
-CLIENT_SECRET_FILE = 'client_secret.json'
-# Scopes define what permissions you application needs. Below is 
-# an example for the following scopes:
-# Sheets - read only 
-# Gmail - Read, compose, send
-SCOPES = ('https://www.googleapis.com/auth/spreadsheets.readonly '
-		'https://www.googleapis.com/auth/gmail.readonly '
-		'https://www.googleapis.com/auth/gmail.compose '
-		'https://www.googleapis.com/auth/gmail.send')
+# Update this with the location of your client_secret.json, which
+# allows your application to talk to Google's servers
+CLIENT_SECRET_FILE = '~/google_credentials/client_secret.json'
+# Scopes define what permissions you application needs.
+# If you are storing scopes in a file, be sure to change the location
+with open('~/google_credentials/scopes.txt', 'r') as scopes_file:
+	SCOPES = scopes_file.read()
 
 
 def get_credentials():
