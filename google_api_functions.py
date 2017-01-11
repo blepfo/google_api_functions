@@ -21,8 +21,10 @@ import base64
 
 
 """--- Information for Authorization ---"""
-APPLICATION_NAME = 'TW Chore Scheduler'
+APPLICATION_NAME = 'APPLICATION NAME'
 CLIENT_SECRET_FILE = 'client_secret.json'
+# Scopes define what permissions you application needs. Below is 
+# an example for the following scopes:
 # Sheets - read only 
 # Gmail - Read, compose, send
 SCOPES = ('https://www.googleapis.com/auth/spreadsheets.readonly '
