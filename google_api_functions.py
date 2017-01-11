@@ -24,11 +24,13 @@ import base64
 APPLICATION_NAME = 'APPLICATION NAME'
 # Update this with the location of your client_secret.json, which
 # allows your application to talk to Google's servers
-CLIENT_SECRET_FILE = '~/google_credentials/client_secret.json'
+CLIENT_SECRET_FILE = '/home/pi/google_credentials/client_secret.json'
 # Scopes define what permissions you application needs.
 # If you are storing scopes in a file, be sure to change the location
-with open('~/google_credentials/scopes.txt', 'r') as scopes_file:
-	SCOPES = scopes_file.read()
+with open('/home/pi/google_credentials/scopes.txt', 'r') as scopes_file:
+	# In scopes.txt, each scope is stored by itself on a single line
+	SCOPES = scopes_file.read().splitlines()
+	SCOPES = " ".join(SCOPES)
 
 
 def get_credentials():
@@ -46,7 +48,7 @@ def get_credentials():
   credential_dir = os.path.join(home_dir, '.credentials')
   if not os.path.exists(credential_dir):
     os.makedirs(credential_dir)
-  credential_path = os.path.join(credential_dir, 'chore_creds.json')
+  credential_path = os.path.join(credential_dir, 'google_api_credentials.json')
 
   store = Storage(credential_path)
   credentials = store.get()
