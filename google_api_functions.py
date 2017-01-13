@@ -182,7 +182,7 @@ class Google_API:
 							 now.year, now.month, now.day, now.hour, now.minute)
 		if logfile != None:
 			# Save message to the logfile
-			with open("../bin/log.txt", "a") as log_file:
+			with open(logfile, "a") as log_file:
 				log_file.write(time_str + "\n" + message + "\n")
 		# Save message to the Google Sheet
 		# Get the next usable row on the spreadsheet
