@@ -1,10 +1,19 @@
 """--- Imports ---"""
 # For making API requests
 import httplib2
+
 # For retrieving and storing credentials
 import os
+
 # For reading from an app_details.json
 import json
+
+# For printing date with log message
+from datetime import datetime
+
+# Email creation modules
+from email.mime.text import MIMEText
+import base64
 
 # Google API modules
 from apiclient import discovery
@@ -17,9 +26,6 @@ from oauth2client.file import Storage
 import argparse
 flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
 
-# Email creation modules
-from email.mime.text import MIMEText
-import base64
 
 def get_api_object(path):
 	""" Gets details from an app_details.json and returns Google_API object
@@ -62,6 +68,8 @@ class Google_API:
 		self.CLIENT_SECRET_FILE = CLIENT_SECRET_FILE
 		self.SCOPES = SCOPES
 		self.http = self.get_authorized_http(CREDENTIALS_FILE)
+		self.sheets_service = None
+		self.gmail_service = None
 
 	def get_credentials(self, CREDENTIAL_FILE=None):
 		""" Retreive user credentials so we can access the spreadsheet.
@@ -102,16 +110,23 @@ class Google_API:
 
 	def get_sheets_service(self):
 		""" Return service object for the Sheets API """
-		sheets_discoveryUrl = ('https://sheets.googleapis.com/$discovery/rest?' 
-					'version=v4')
-		return discovery.build('sheets', 'v4', http=self.http,
-							discoveryServiceUrl=sheets_discoveryUrl)
+		# Store sheets service internally so we don't get duplicates
+		# If the function is called repeatedly
+		if self.sheets_service == None:
+			sheets_discoveryUrl = ('https://sheets.googleapis.com/$discovery/rest?' 
+						'version=v4')
+			self.sheets_service = discovery.build('sheets', 'v4', http=self.http,
+								discoveryServiceUrl=sheets_discoveryUrl)
+		return self.sheets_service
 
 	def get_gmail_service():
 		""" Return service object for the Gmail API """
-		return discovery.build('gmail', 'v1', http=self.http)
+		# Store the gmail service internally so we don't get duplicates
+		if self.gmail_service == None:
+			self.gmail_service = discovery.build('gmail', 'v1', http=self.http)
+		return self.gmail_service
 
-	def create_message(sender, to, subject, message_text):
+	def create_email(sender, to, subject, message_text):
 		""" Create message to send using the Gmail API
 		This function creates a MIME format email and encodes it using
 		base64 so that it can be sent using the Gmail API. To send
@@ -140,7 +155,7 @@ class Google_API:
 		raw = byte_string.decode()
 		return {'raw' : raw}
 
-	def send_message(service, user_id, message):
+	def send_email(service, user_id, message):
 		""" Send message to the Gmail API
 		This function assumes that service is a Service object fir the Gmail API,
 		and that message is constructed using create_message()
@@ -152,3 +167,35 @@ class Google_API:
 			print('Sending email')
 		except:
 			print('Error sending email')
+
+	def log_message(self, sheet_id, message, logfile=None):
+		""" Publish log messages to a Google Sheet
+		Make sure that the sheet has a tab named "Log"
+		The first two columns of the "Log" tab will be used to log the time
+		and the message, respectively.
+		Optionally: Give the path to a logfile to which messages
+		will be saved locally
+		"""
+		# Get the current time
+		now = datetime.now()
+		time_str = "%d-%d-%d %d:%d" % (
+							 now.year, now.month, now.day, now.hour, now.minute)
+		if logfile != None:
+			# Save message to the logfile
+			with open("../bin/log.txt", "a") as log_file:
+				log_file.write(time_str + "\n" + message + "\n")
+		# Save message to the Google Sheet
+		# Get the next usable row on the spreadsheet
+		sheets_service = self.get_sheets_service()
+		# Skip the first row, which has column labels
+		sheet_range = "Log!A2:B"
+		values_result = sheets_service.spreadsheets().values().get(
+					spreadsheetId=sheet_id, range=sheet_range).execute()
+		# First usable row will be 2
+		empty_row = str(len(values_result.get("values",[])) + 2)
+		sheets_range = "Log!A" + empty_row + ":B" + empty_row
+		values = [[time_str, message]]
+		body = {"values" : values}
+		update_result = sheets_service.spreadsheets().values().update(
+					spreadsheetId=sheet_id, range=sheets_range,
+					valueInputOption="RAW", body=body).execute()
