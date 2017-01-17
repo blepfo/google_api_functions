@@ -50,7 +50,7 @@ def get_api_object(path):
 def read_scopes(path):
 	""" Reads scopes from a text file with one scope per line 
 	"""
-	with open('/home/pi/google_credentials/scopes.txt', 'r') as scopes_file:
+	with open(path, 'r') as scopes_file:
 			return " ".join(scopes_file.read().splitlines())
 
 
