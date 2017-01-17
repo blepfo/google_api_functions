@@ -108,66 +108,6 @@ class Google_API:
 		credentials = self.get_credentials(path)
 		return credentials.authorize(httplib2.Http())
 
-	def get_sheets_service(self):
-		""" Return service object for the Sheets API """
-		# Store sheets service internally so we don't get duplicates
-		# If the function is called repeatedly
-		if self.sheets_service == None:
-			sheets_discoveryUrl = ('https://sheets.googleapis.com/$discovery/rest?' 
-						'version=v4')
-			self.sheets_service = discovery.build('sheets', 'v4', http=self.http,
-								discoveryServiceUrl=sheets_discoveryUrl)
-		return self.sheets_service
-
-	def get_gmail_service():
-		""" Return service object for the Gmail API """
-		# Store the gmail service internally so we don't get duplicates
-		if self.gmail_service == None:
-			self.gmail_service = discovery.build('gmail', 'v1', http=self.http)
-		return self.gmail_service
-
-	def create_email(sender, to, subject, message_text):
-		""" Create message to send using the Gmail API
-		This function creates a MIME format email and encodes it using
-		base64 so that it can be sent using the Gmail API. To send
-		the message returned by this function, use the send_message()
-		function
-		"""
-		# Construct the email using the MIME format
-		message = MIMEText(message_text)
-		message['to'] = to
-		message['from'] = sender
-		message['subject'] = subject
-		
-		""" String probelms in Python 3
-		base64.urlsafe_b64encode() takes a byte string.
-		message.as_string() returns a Python 3 str string, so we have to encode it
-		"""
-
-		byte_string = base64.urlsafe_b64encode(message.as_string().encode('ascii'))
-
-		""" More string problems in Python 3
-		base64.urlsafe_b64encode() returns a byte string, so we have to decode it
-		to be an str type string so give to the Gmail API so that the string will
-		JSON Serializable 
-		"""
-
-		raw = byte_string.decode()
-		return {'raw' : raw}
-
-	def send_email(service, user_id, message):
-		""" Send message to the Gmail API
-		This function assumes that service is a Service object fir the Gmail API,
-		and that message is constructed using create_message()
-		"""
-
-		try:
-			message = (service.users().messages().send(userId = user_id, body=message)
-					.execute())
-			print('Sending email')
-		except:
-			print('Error sending email')
-
 	def log_message(self, sheet_id, message, logfile=None):
 		""" Publish log messages to a Google Sheet
 		Make sure that the sheet has a tab named "Log"
@@ -199,3 +139,86 @@ class Google_API:
 		update_result = sheets_service.spreadsheets().values().update(
 					spreadsheetId=sheet_id, range=sheets_range,
 					valueInputOption="RAW", body=body).execute()
+
+	""" --- SHEETS FUNCTIONS --- """
+	def get_sheets_service(self):
+		""" Return service object for the Sheets API """
+		# Store sheets service internally so we don't get duplicates
+		# If the function is called repeatedly
+		if self.sheets_service == None:
+			sheets_discoveryUrl = ('https://sheets.googleapis.com/$discovery/rest?' 
+						'version=v4')
+			self.sheets_service = discovery.build('sheets', 'v4', http=self.http,
+								discoveryServiceUrl=sheets_discoveryUrl)
+		return self.sheets_service
+
+	def clear_sheet_range(self, sheet_id, sheet_range):
+		""" Clears all cells in a given range on a sheet
+		"""
+		sheets_service = self.get_sheets_service()
+		result = sheets_service.spreadsheets().values().get(
+					spreadsheetId=sheet_id, range=sheet_range).execute();
+		values = result.get('values', [])
+		# Create blank entry for each occupied cell on the sheet
+		new_values = []
+		for row in values:
+			new_values.append([''] * len(row))
+		body = {
+			'values': new_values
+		}
+		# Upload blank contents to the sheet
+		result = sheets_service.spreadsheets().values().update(
+					spreadsheetId=sheet_id, range=sheet_range,
+					valueInputOption='RAW', body=body).execute()
+
+	""" --- GMAIL FUNCTIONS --- """
+	def get_gmail_service():
+		""" Return service object for the Gmail API """
+		# Store the gmail service internally so we don't get duplicates
+		if self.gmail_service == None:
+			self.gmail_service = discovery.build('gmail', 'v1', http=self.http)
+		return self.gmail_service
+
+	def create_email(sender, to, subject, message_text):
+		""" Create message to send using the Gmail API
+		This function creates a MIME format email and encodes it using
+		base64 so that it can be sent using the Gmail API. To send
+		the message returned by this function, use the send_message()
+		function
+		"""
+		# Construct the email using the MIME format
+		message = MIMEText(message_text)
+		message['to'] = to
+		message['from'] = sender
+		message['subject'] = subject
+		
+		""" String problems in Python 3
+		base64.urlsafe_b64encode() takes a byte string.
+		message.as_string() returns a Python 3 str string, so we have to encode it
+		"""
+
+		byte_string = base64.urlsafe_b64encode(message.as_string().encode('ascii'))
+
+		""" More string problems in Python 3
+		base64.urlsafe_b64encode() returns a byte string, so we have to decode it
+		to be an str type string so give to the Gmail API so that the string will
+		JSON Serializable 
+		"""
+
+		raw = byte_string.decode()
+		return {'raw' : raw}
+
+	def send_email(service, user_id, message):
+		""" Send message to the Gmail API
+		This function assumes that service is a Service object fir the Gmail API,
+		and that message is constructed using create_message()
+		"""
+
+		try:
+			message = (service.users().messages().send(userId = user_id, body=message)
+					.execute())
+			print('Sending email')
+		except:
+			print('Error sending email')
+
+
